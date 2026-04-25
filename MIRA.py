@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 """
 МИРА (MIRA) — AI-Ассистент v11.0 "ULTIMATE STABLE"
-✅ Исправлены все ошибки: Layout, Threads, CSS, DPI.
+✅ Исправлены все ошибки: Layout, Threads, CSS, DPI, Импорты.
 ✨ Дизайн: Fluent Dark, FullHD, 100% отзывчивый UI.
-🧠 Функции: Omni-Resolver (поиск любых игр/приложений), 
-            Поиск в интернете, Сценарии, Голос, Локальный AI (Ollama).
+🧠 Функции: Omni-Resolver, Поиск в интернете, Сценарии, Голос, Локальный AI.
+© CayPlay 2026. Все права защищены.
 """
 
 # === 1. ИМПОРТЫ ===
@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
     QSystemTrayIcon, QMenu, QDialog, QPlainTextEdit, QScrollArea,
     QStackedWidget, QMessageBox, QToolButton, QSizePolicy
 )
+# ✅ ИСПРАВЛЕНО: QAction перемещен в QtGui для PyQt6
 from PyQt6.QtGui import (
     QAction, QFont, QIcon, QColor, QPainter, QPixmap, QClipboard
 )
@@ -120,7 +121,7 @@ class FluentButton(QPushButton):
         self._setup_style()
         
     def _setup_style(self):
-        # ✅ ИСПРАВЛЕНО: Удалено свойство transition, которое не поддерживается Qt
+        # ✅ ИСПРАВЛЕНО: Удален transition
         base = "QPushButton { border: none; border-radius: 8px; padding: 10px 18px; font-family: 'Segoe UI', sans-serif; font-size: 14px; }"
         if self.accent:
             self.setStyleSheet(base + """
@@ -300,7 +301,6 @@ class OmniResolver:
                             shortcut = os.path.join(root, f)
                             if shortcut.lower().endswith('.lnk'):
                                 try:
-                                    # Пытаемся использовать win32com, если есть, иначе пропускаем
                                     import pythoncom
                                     from win32com.shell import shell
                                     pythoncom.CoInitialize()
@@ -327,13 +327,12 @@ class OmniResolver:
                 if shutil.which(exe): return shutil.which(exe)
                 return exe
         
-        # Steam Cache
         for game_name, exe_path in self._steam_games_cache.items():
             if game_name in cmd or cmd in game_name:
                 if os.path.exists(exe_path): return exe_path
         
         if shutil.which(cmd): return shutil.which(cmd)
-        if shutil.which(cmd + ".exe"): return shutil.which(cmd + ".exe") # ✅ Исправленная кавычка
+        if shutil.which(cmd + ".exe"): return shutil.which(cmd + ".exe")
         
         reg_result = self._search_registry_apps(cmd)
         if reg_result: return reg_result
@@ -520,7 +519,14 @@ class Sidebar(QFrame):
         lay.addSpacing(16)
         
         self.nav_btns = {}
-        nav_items = [("chat", "💬", "Чат"), ("scripts", "🎬", "Сценарии"), ("contacts", "📇", "Контакты"), ("settings", "⚙️", "Настройки")]
+        # ✅ ДОБАВЛЕНО: "about" в навигацию
+        nav_items = [
+            ("chat", "💬", "Чат"), 
+            ("scripts", "🎬", "Сценарии"), 
+            ("contacts", "📇", "Контакты"), 
+            ("settings", "⚙️", "Настройки"),
+            ("about", "ℹ️", "О программе")
+        ]
         for nav_id, icon, tooltip in nav_items:
             btn = QToolButton()
             btn.setIcon(QIcon())
@@ -774,7 +780,69 @@ class SettingsPanel(QFrame):
         self.labels["steam"].setText(f"{'✅' if steam_path else '❌'} Steam: {steam_path or 'Не найден'}")
         self.labels["steam"].setStyleSheet(f"color: {'#34d399' if steam_path else '#f87171'}; font-family: Consolas; font-size: 14px;")
 
-# === 7. ГЛАВНОЕ ОКНО ===
+# === 7. О ПРОГРАММЕ (About Panel) ===
+class AboutPanel(QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        card = FluentCard()
+        card_lay = QVBoxLayout(card)
+        card_lay.setContentsMargins(50, 50, 50, 50)
+        card_lay.setSpacing(16)
+        card_lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        logo = QLabel("🌟")
+        logo.setFont(QFont("Segoe UI Emoji", 48))
+        logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card_lay.addWidget(logo)
+
+        title = QLabel("MIRA")
+        title.setFont(QFont("Segoe UI", 36, QFont.Weight.Bold))
+        title.setStyleSheet("color: #ffffff;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card_lay.addWidget(title)
+
+        version = QLabel("Версия 11.0 | Ultimate Stable")
+        version.setFont(QFont("Consolas", 13))
+        version.setStyleSheet("color: #605cd8;")
+        version.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card_lay.addWidget(version)
+
+        desc = QLabel("Локальный ИИ-ассистент для полного контроля над вашим ПК.\nГолос, текст, сценарии, поиск в интернете и запуск любых приложений.")
+        desc.setFont(QFont("Segoe UI", 14))
+        desc.setStyleSheet("color: #a0a0b0;")
+        desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc.setWordWrap(True)
+        card_lay.addWidget(desc)
+
+        card_lay.addSpacing(12)
+
+        copyright = QLabel("© CayPlay 2026. Все права защищены.")
+        copyright.setFont(QFont("Segoe UI", 11, QFont.Weight.Medium))
+        copyright.setStyleSheet("color: #6b7280;")
+        copyright.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card_lay.addWidget(copyright)
+
+        btns_lay = QHBoxLayout()
+        btns_lay.addStretch()
+        btns_lay.setSpacing(12)
+        
+        gh_btn = FluentButton("🐙 GitHub")
+        gh_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com")))
+        tg_btn = FluentButton("✈️ Telegram", accent=True)
+        tg_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://t.me/CayPlay78")))
+        
+        btns_lay.addWidget(gh_btn)
+        btns_lay.addWidget(tg_btn)
+        btns_lay.addStretch()
+        card_lay.addLayout(btns_lay)
+
+        lay.addWidget(card, 0, Qt.AlignmentFlag.AlignCenter)
+
+# === 8. ГЛАВНОЕ ОКНО ===
 
 class MIRAWindow(QMainWindow):
     voice_signal = pyqtSignal(str)
@@ -788,7 +856,7 @@ class MIRAWindow(QMainWindow):
         self.voice = VoiceManager(self.cfg)
         
         self.voice_signal.connect(self._on_voice)
-        self.active_threads = []  # ✅ Менеджер потоков для предотвращения утечек
+        self.active_threads = []
         
         self._setup_ui()
         self._apply_styles()
@@ -856,6 +924,10 @@ class MIRAWindow(QMainWindow):
         self.settings_panel = SettingsPanel(self.cfg)
         self.stacked.addWidget(self.settings_panel)
         
+        # ✅ ДОБАВЛЕНО: Панель "О программе"
+        self.about_panel = AboutPanel()
+        self.stacked.addWidget(self.about_panel)
+        
         content_lay.addWidget(self.stacked, 1)
         root_lay.addWidget(content_widget, 1)
 
@@ -870,7 +942,6 @@ class MIRAWindow(QMainWindow):
         """)
 
     def _init_tray(self):
-        # Создаем иконку
         pixmap = QPixmap(32, 32)
         pixmap.fill(Qt.GlobalColor.transparent)
         p = QPainter(pixmap)
@@ -880,11 +951,9 @@ class MIRAWindow(QMainWindow):
         p.setFont(QFont("Consolas", 16, QFont.Weight.Bold))
         p.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "M")
         p.end()
-        
         self.tray = QSystemTrayIcon(QIcon(pixmap), self)
         self.tray.setToolTip("MIRA — AI Ассистент")
         
-        # Создаем меню
         m = QMenu()
         
         # ✅ Кнопка ОТКРЫТЬ
@@ -894,16 +963,18 @@ class MIRAWindow(QMainWindow):
         
         m.addSeparator()
         
+        # ✅ ДОБАВЛЕНО: Пункт "О программе" в трее
+        action_about = QAction("ℹ️ О программе", self)
+        action_about.triggered.connect(lambda: (self._restore_window(), self._switch_page("about")))
+        m.addAction(action_about)
+        
         # ✅ Кнопка ВЫХОД
         action_exit = QAction("❌ Выход", self)
         action_exit.triggered.connect(self._full_exit)
         m.addAction(action_exit)
         
         self.tray.setContextMenu(m)
-        
-        # Двойной клик тоже открывает окно
         self.tray.activated.connect(lambda reason: self._restore_window() if reason == QSystemTrayIcon.ActivationReason.DoubleClick else None)
-        
         self.tray.show()
 
     def _restore_window(self):
@@ -912,46 +983,36 @@ class MIRAWindow(QMainWindow):
             self.showNormal()
         elif not self.isVisible():
             self.show()
-        
-        # Поднимаем поверх всех окон и даем фокус
         self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
         self.activateWindow()
         self.raise_()
 
     def _full_exit(self):
         """Полное закрытие приложения"""
-        # Скрываем трей
         self.tray.hide()
-        # Закрываем все потоки (грубая сила, но надежно для выхода)
         for thread in self.active_threads:
             if thread.isRunning():
                 thread.terminate()
-        # Выход
         sys.exit(0)
-
-    def closeEvent(self, event):
-        """Обработка нажатия на крестик (X) в окне"""
-        # Не закрываем приложение полностью, а сворачиваем в трей
-        self.hide()
-        self.tray.showMessage(
-            "MIRA", 
-            "Ассистент свернут в трей. Нажмите дважды для открытия.", 
-            QSystemTrayIcon.MessageIcon.Information, 
-            2000
-        )
-        # Игнорируем событие закрытия, чтобы процесс остался жить
-        event.ignore()
 
     def _toggle_maximize(self):
         if self.isMaximized(): self.showNormal()
         else: self.showMaximized()
 
     def _switch_page(self, page: str):
-        titles = {"chat": "💬 Чат", "scripts": "🎬 Сценарии", "contacts": "📇 Контакты", "settings": "⚙️ Настройки"}
-        self.title_label.setText(titles.get(page, "MIRA"))
+        titles = {
+            "chat": "💬 Чат", 
+            "scripts": "🎬 Сценарии", 
+            "contacts": "📇 Контакты", 
+            "settings": "⚙️ Настройки", 
+            "about": "ℹ️ О программе"  # ✅ ДОБАВЛЕНО
+        }
         page_widget = {
-            "chat": self.chat_panel, "scripts": self.script_panel, 
-            "contacts": self.contacts_panel, "settings": self.settings_panel
+            "chat": self.chat_panel, 
+            "scripts": self.script_panel, 
+            "contacts": self.contacts_panel, 
+            "settings": self.settings_panel,
+            "about": self.about_panel  # ✅ ДОБАВЛЕНО
         }.get(page, self.chat_panel)
         self.stacked.setCurrentWidget(page_widget)
 
@@ -1176,13 +1237,17 @@ class MIRAWindow(QMainWindow):
         threading.Thread(target=listen, daemon=True).start()
 
     def closeEvent(self, event):
-        self.tray.showMessage("MIRA", "Свёрнута в трей. Двойной клик для открытия.", QSystemTrayIcon.MessageIcon.Information, 2000)
         self.hide()
+        self.tray.showMessage(
+            "MIRA", 
+            "Ассистент свернут в трей. Нажмите дважды для открытия.", 
+            QSystemTrayIcon.MessageIcon.Information, 
+            2000
+        )
         event.ignore()
 
 # === 8. ЗАПУСК ===
 if __name__ == "__main__":
-    # ✅ ИСПРАВЛЕНО: Удалены устаревшие атрибуты DPI для PyQt6
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     app.setStyle("Fusion")
