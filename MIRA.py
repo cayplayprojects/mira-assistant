@@ -870,6 +870,7 @@ class MIRAWindow(QMainWindow):
         """)
 
     def _init_tray(self):
+        # Создаем иконку
         pixmap = QPixmap(32, 32)
         pixmap.fill(Qt.GlobalColor.transparent)
         p = QPainter(pixmap)
@@ -879,14 +880,67 @@ class MIRAWindow(QMainWindow):
         p.setFont(QFont("Consolas", 16, QFont.Weight.Bold))
         p.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "M")
         p.end()
+        
         self.tray = QSystemTrayIcon(QIcon(pixmap), self)
         self.tray.setToolTip("MIRA — AI Ассистент")
+        
+        # Создаем меню
         m = QMenu()
-        m.addAction("🔍 Открыть", self.show)
-        m.addAction("❌ Выход", self.close)
+        
+        # ✅ Кнопка ОТКРЫТЬ
+        action_open = QAction("🔍 Открыть", self)
+        action_open.triggered.connect(self._restore_window)
+        m.addAction(action_open)
+        
+        m.addSeparator()
+        
+        # ✅ Кнопка ВЫХОД
+        action_exit = QAction("❌ Выход", self)
+        action_exit.triggered.connect(self._full_exit)
+        m.addAction(action_exit)
+        
         self.tray.setContextMenu(m)
-        self.tray.activated.connect(lambda r: self.show() if r == QSystemTrayIcon.ActivationReason.DoubleClick else None)
+        
+        # Двойной клик тоже открывает окно
+        self.tray.activated.connect(lambda reason: self._restore_window() if reason == QSystemTrayIcon.ActivationReason.DoubleClick else None)
+        
         self.tray.show()
+
+    def _restore_window(self):
+        """Восстанавливает и поднимает окно на передний план"""
+        if self.isMinimized():
+            self.showNormal()
+        elif not self.isVisible():
+            self.show()
+        
+        # Поднимаем поверх всех окон и даем фокус
+        self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
+        self.activateWindow()
+        self.raise_()
+
+    def _full_exit(self):
+        """Полное закрытие приложения"""
+        # Скрываем трей
+        self.tray.hide()
+        # Закрываем все потоки (грубая сила, но надежно для выхода)
+        for thread in self.active_threads:
+            if thread.isRunning():
+                thread.terminate()
+        # Выход
+        sys.exit(0)
+
+    def closeEvent(self, event):
+        """Обработка нажатия на крестик (X) в окне"""
+        # Не закрываем приложение полностью, а сворачиваем в трей
+        self.hide()
+        self.tray.showMessage(
+            "MIRA", 
+            "Ассистент свернут в трей. Нажмите дважды для открытия.", 
+            QSystemTrayIcon.MessageIcon.Information, 
+            2000
+        )
+        # Игнорируем событие закрытия, чтобы процесс остался жить
+        event.ignore()
 
     def _toggle_maximize(self):
         if self.isMaximized(): self.showNormal()
