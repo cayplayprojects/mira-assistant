@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-МИРА (MIRA) — AI-Ассистент v13.0 "NEBULA"
-✨ Полностью переработанный UI: Fluid Glassmorphism + анимации
+МИРА (MIRA) — AI-Ассистент v13.1 "NEBULA"
 🧠 AI: Qwen 3 (3.5b) на Ollama
 🔄 Новое: Управление процессами (закрытие приложений)
 © CayPlay 2026. Все права защищены.
