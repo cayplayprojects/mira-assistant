@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-МИРА (MIRA) — AI-Ассистент v13.1 "NEBULA"
-🧠 AI: Qwen 3 (3.5b) на Ollama
-🔄 Новое: Управление процессами (закрытие приложений)
+МИРА (MIRA) — AI-Ассистент v13.3 "NEBULA"
+🧠 AI: Qwen 3 (latest) на Ollama
+🔄 Управление процессами (закрытие приложений)
+🔧 Интеллектуальная обработка ошибок (приложения не найдены)
+🪟 Рабочие кнопки управления окном + перетаскивание
+📋 Установка Qwen 3: ollama pull qwen3
 © CayPlay 2026. Все права защищены.
 """
 
@@ -24,7 +27,7 @@ from PyQt6.QtWidgets import (
 
 from PyQt6.QtGui import (
     QAction, QFont, QIcon, QColor, QPainter, QPixmap, QClipboard,
-    QLinearGradient, QBrush, QPalette, QFontDatabase, QGradient
+    QLinearGradient, QBrush, QPalette, QFontDatabase, QGradient, QMouseEvent
 )
 from PyQt6.QtCore import (
     Qt, QThread, pyqtSignal, QTimer, QUrl, QSize, QObject,
@@ -47,7 +50,7 @@ CONFIG_PATH = Path("mira_config.json")
 DEFAULT_CONFIG = {
     "ai": {
         "base_url": "http://localhost:11434",
-        "model": "qwen3:3.5b",
+        "model": "qwen3",
         "max_tokens": 4096,
         "temperature": 0.4
     },
@@ -103,9 +106,14 @@ def load_config() -> Dict:
     try:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             cfg = json.load(f)
-        if cfg.get("ai", {}).get("model") != "qwen3:3.5b":
-            cfg.setdefault("ai", {})["model"] = "qwen3:3.5b"
+        
+        # Автоисправление: заменяем старые названия моделей на qwen3
+        old_models = ["qwen3:3.5b", "qwen2.5:1.5b", "qwen2.5:3.5b"]
+        if cfg.get("ai", {}).get("model") in old_models:
+            cfg["ai"]["model"] = "qwen3"
             cfg["ai"]["max_tokens"] = 4096
+            logger.info("Модель обновлена на qwen3")
+        
         for k, v in DEFAULT_CONFIG.items():
             if k not in cfg:
                 cfg[k] = v
@@ -128,37 +136,31 @@ def save_config(cfg):
 
 class Theme:
     """Премиальная тёмная тема с фиолетовыми акцентами"""
-    # Основные цвета
-    BG_DEEP = "#06060f"           # Самый глубокий фон
-    BG_MAIN = "#0c0c1d"           # Основной фон
-    BG_SURFACE = "#12122a"        # Поверхности
-    BG_ELEVATED = "#1a1a35"       # Приподнятые элементы
-    BG_GLASS = "rgba(18, 18, 42, 0.75)"  # Стеклянный эффект
+    BG_DEEP = "#06060f"
+    BG_MAIN = "#0c0c1d"
+    BG_SURFACE = "#12122a"
+    BG_ELEVATED = "#1a1a35"
+    BG_GLASS = "rgba(18, 18, 42, 0.75)"
     
-    # Акценты
-    ACCENT = "#8b5cf6"            # Основной фиолетовый
-    ACCENT_LIGHT = "#a78bfa"      # Светлый фиолетовый
-    ACCENT_DARK = "#7c3aed"       # Тёмный фиолетовый
-    ACCENT_GLOW = "rgba(139, 92, 246, 0.25)"  # Свечение
+    ACCENT = "#8b5cf6"
+    ACCENT_LIGHT = "#a78bfa"
+    ACCENT_DARK = "#7c3aed"
+    ACCENT_GLOW = "rgba(139, 92, 246, 0.25)"
     
-    # Градиенты
     GRADIENT_PRIMARY = "qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #8b5cf6, stop:0.5 #a78bfa, stop:1 #7c3aed)"
     GRADIENT_HOVER = "qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #9b6cf6, stop:0.5 #b78bfa, stop:1 #8c4aed)"
     GRADIENT_PRESSED = "qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #7b4ce6, stop:0.5 #978bfa, stop:1 #6c2add)"
     
-    # Текст
     TEXT_PRIMARY = "#f1f5f9"
     TEXT_SECONDARY = "#94a3b8"
     TEXT_MUTED = "#64748b"
     TEXT_ACCENT = "#c4b5fd"
     
-    # Статусы
     SUCCESS = "#10b981"
     ERROR = "#ef4444"
     WARNING = "#f59e0b"
     INFO = "#3b82f6"
     
-    # Границы
     BORDER = "rgba(139, 92, 246, 0.15)"
     BORDER_FOCUS = "rgba(139, 92, 246, 0.4)"
     BORDER_HOVER = "rgba(139, 92, 246, 0.3)"
@@ -344,7 +346,6 @@ class StatusWave(QFrame):
 class ProcessManager:
     """Управление процессами Windows (закрытие приложений)"""
     
-    # Маппинг русских названий на исполняемые файлы
     APP_MAP = {
         "блокнот": "notepad.exe",
         "калькулятор": "CalculatorApp.exe",
@@ -367,14 +368,12 @@ class ProcessManager:
         """Находит процесс по имени приложения"""
         name = name.lower().strip()
         
-        # Проверяем маппинг
         targets = ProcessManager.APP_MAP.get(name, name)
         if isinstance(targets, str):
             targets = [targets]
         elif not isinstance(targets, list):
             targets = [name]
             
-        # Ищем среди запущенных процессов
         for proc in psutil.process_iter(['pid', 'name', 'exe']):
             try:
                 proc_name = proc.info['name'].lower()
@@ -382,16 +381,12 @@ class ProcessManager:
                 
                 for target in targets:
                     target_lower = target.lower()
-                    # Проверяем имя процесса
                     if proc_name == target_lower:
                         return proc
-                    # Проверяем путь
                     if target_lower in proc_exe:
                         return proc
-                    # Проверяем без .exe
                     if target_lower.replace('.exe', '') in proc_name.replace('.exe', ''):
                         return proc
-                    # Частичное совпадение для сложных случаев
                     if len(target_lower) > 4 and target_lower.replace('.exe', '') in proc_name:
                         return proc
             except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -406,7 +401,6 @@ class ProcessManager:
             try:
                 app_name = proc.name()
                 proc.terminate()
-                # Даём время на завершение
                 try:
                     proc.wait(timeout=3)
                 except psutil.TimeoutExpired:
@@ -414,7 +408,7 @@ class ProcessManager:
                 return True, f"✅ Закрыто: {app_name}"
             except Exception as e:
                 return False, f"❌ Ошибка при закрытии: {e}"
-        return False, f"❌ Приложение '{name}' не найдено среди запущенных"
+        return False, f"❌ Приложение «{name}» не запущено"
     
     @staticmethod
     def get_running_apps() -> List[str]:
@@ -429,7 +423,7 @@ class ProcessManager:
                         apps.add(name)
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
-        return sorted(list(apps))[:20]  # Топ-20 приложений
+        return sorted(list(apps))[:20]
 
 class OmniResolver:
     def __init__(self, config: Dict):
@@ -577,6 +571,15 @@ class OmniResolver:
                         if cmd == f_name or cmd == f_lower:
                             return os.path.join(root, f)
         return cmd
+    
+    def _get_friendly_name(self, command: str) -> str:
+        """Возвращает понятное название приложения для сообщений"""
+        cmd = command.lower().strip(".,!?;:- \"'")
+        for verb in ["открой", "запусти", "включи", "покажи", "открыть", "запустить", "включить", "найди"]:
+            if cmd.startswith(verb):
+                cmd = cmd.replace(verb, "").strip()
+                break
+        return cmd.capitalize()
 
 class SystemExecutor:
     def __init__(self, config: Dict):
@@ -617,13 +620,59 @@ class SystemExecutor:
                 os.startfile(command) if platform.system()=="Windows" else None
                 return f"✅ Открыто: {command}"
             else:
+                # Проверяем существование приложения ПЕРЕД запуском
                 resolved = self.resolver.resolve(command)
-                logger.info(f"🔍 Resolve '{command}' -> '{resolved}'")
+                logger.info(f"Resolve '{command}' -> '{resolved}'")
+                
+                # Проверяем, что это реальный путь к файлу
                 if resolved and Path(resolved).exists():
-                    subprocess.Popen(resolved, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                    try:
+                        subprocess.Popen(resolved, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                        app_name = Path(resolved).stem
+                        return f"✅ Запущено: {app_name}"
+                    except Exception as e:
+                        return f"❌ Не удалось запустить: {e}"
+                
+                # Проверяем, есть ли такая команда в PATH
+                elif resolved and shutil.which(resolved):
+                    try:
+                        subprocess.Popen(resolved, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                        return f"✅ Запущено: {resolved}"
+                    except Exception as e:
+                        return f"❌ Не удалось запустить: {e}"
+                
+                # Пробуем запустить как есть (может быть системной командой)
+                elif command.lower() in ["cmd", "cmd.exe", "powershell", "powershell.exe"] or \
+                     shutil.which(command.split()[0] if ' ' in command else command):
+                    try:
+                        subprocess.Popen(command, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                        return f"✅ Запущено: {command}"
+                    except Exception as e:
+                        return f"❌ Не удалось запустить: {e}"
+                
+                # Приложение не найдено — информативное сообщение
                 else:
-                    subprocess.Popen(command, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
-                return f"✅ Запущено: {Path(resolved).name if Path(resolved).exists() else command}"
+                    search_name = command.lower().strip(".,!?;:- \"'")
+                    for verb in ["открой", "запусти", "включи", "покажи", "открыть", "запустить", "включить", "найди"]:
+                        if search_name.startswith(verb):
+                            search_name = search_name.replace(verb, "").strip()
+                            break
+                    
+                    friendly_name = self.resolver._get_friendly_name(command)
+                    
+                    # Проверяем алиасы для подсказки
+                    if search_name in self.resolver.aliases:
+                        exe_path = self.resolver.aliases[search_name]
+                        return f"❌ Не могу найти приложение «{friendly_name}»\n💡 Ожидаемый файл: {exe_path}\nПроверьте, установлено ли приложение"
+                    
+                    # Проверяем, может это игра из Steam
+                    if self.resolver.steam_path:
+                        for game_name in self.resolver._steam_games_cache:
+                            if search_name in game_name or game_name in search_name:
+                                return f"❌ Игра «{friendly_name}» найдена в Steam, но исполняемый файл не обнаружен\n💡 Попробуйте запустить через Steam"
+                    
+                    return f"❌ Не могу найти приложение «{friendly_name}»\n💡 Проверьте название или установите программу"
+                    
         except Exception as e:
             return f"❌ Ошибка: {e}"
 
@@ -661,30 +710,106 @@ class AIManager:
     def __init__(self, config: Dict):
         ai_cfg = config.get("ai", DEFAULT_CONFIG["ai"])
         self.base_url = ai_cfg["base_url"]
-        self.model = ai_cfg["model"]
+        self.model = ai_cfg["model"]  # "qwen3"
         self.ai_history = [{"role":"system","content":"Ты МИРА, ИИ-ассистент на базе Qwen 3. Отвечай кратко, умно и по делу. Помогай с любыми вопросами."}]
         self.ai_available = False
+        self.available_models = []
+        self._detect_qwen_model()
+        
+    def _detect_qwen_model(self):
+        """Автоматически находит доступную модель Qwen"""
         try:
             req = urllib.request.Request(f"{self.base_url}/api/tags")
             with urllib.request.urlopen(req, timeout=3) as r:
-                self.ai_available = r.status == 200
-        except: pass
-        
+                data = json.loads(r.read())
+                models = [m["name"] for m in data.get("models", [])]
+                self.available_models = models
+                
+                # ПРИОРИТЕТ: ищем точное совпадение "qwen3:latest" или "qwen3"
+                qwen_exact = [m for m in models if m == "qwen3:latest" or m == "qwen3"]
+                if qwen_exact:
+                    self.model = qwen_exact[0]
+                    self.ai_available = True
+                    logger.info(f"Найдена Qwen 3 (latest): {self.model}")
+                    return
+                
+                # Ищем любую Qwen 3 (с тегами размера)
+                qwen3_models = [m for m in models if "qwen3" in m.lower()]
+                if qwen3_models:
+                    self.model = qwen3_models[0]
+                    self.ai_available = True
+                    logger.info(f"Найдена Qwen 3: {self.model}")
+                    return
+                
+                # Ищем Qwen 2.5 как запасной вариант
+                qwen25_models = [m for m in models if "qwen2.5" in m.lower()]
+                if qwen25_models:
+                    self.model = qwen25_models[0]
+                    self.ai_available = True
+                    logger.info(f"Qwen 3 не найдена, использую Qwen 2.5: {self.model}")
+                    return
+                
+                # Ищем любую Qwen
+                qwen_any = [m for m in models if "qwen" in m.lower()]
+                if qwen_any:
+                    self.model = qwen_any[0]
+                    self.ai_available = True
+                    logger.info(f"Использую: {self.model}")
+                    return
+                
+                # Ищем другие популярные модели
+                for m in models:
+                    if any(name in m.lower() for name in ["llama3", "mistral", "phi"]):
+                        self.model = m
+                        self.ai_available = True
+                        logger.info(f"Qwen не найдена, использую: {self.model}")
+                        return
+                
+                # Ничего не найдено
+                logger.warning("Не найдено подходящих моделей")
+                self.model = "qwen3"
+                
+        except Exception as e:
+            logger.error(f"Ошибка подключения к Ollama: {e}")
+            self.model = "qwen3"
+    
     def ask(self, prompt: str) -> str:
         if not self.ai_available:
-            return "⚠️ Ollama оффлайн. Установите Qwen 3: `ollama pull qwen3:3.5b`"
+            return ("⚠️ Qwen 3 не найдена в Ollama\n\n"
+                   "📥 Установите модель:\n"
+                   "• ollama pull qwen3\n\n"
+                   "📋 Проверьте список моделей:\n"
+                   "• ollama list")
+        
         self.ai_history.append({"role":"user","content":prompt})
-        if len(self.ai_history) > 10: self.ai_history = [self.ai_history[0]] + self.ai_history[-8:]
+        if len(self.ai_history) > 10: 
+            self.ai_history = [self.ai_history[0]] + self.ai_history[-8:]
+        
         try:
-            payload = json.dumps({"model":self.model,"messages":self.ai_history,"stream":False}).encode()
-            req = urllib.request.Request(f"{self.base_url}/api/chat", data=payload, headers={"Content-Type":"application/json"})
+            payload = json.dumps({
+                "model": self.model,
+                "messages": self.ai_history,
+                "stream": False
+            }).encode()
+            
+            req = urllib.request.Request(
+                f"{self.base_url}/api/chat",
+                data=payload,
+                headers={"Content-Type": "application/json"}
+            )
+            
             with urllib.request.urlopen(req, timeout=60) as r:
                 ans = json.loads(r.read())["message"]["content"]
                 self.ai_history.append({"role":"assistant","content":ans})
                 return ans.strip()
         except Exception as e:
-            return f"🌐 AI Error: {e}"
-    def clear(self): self.ai_history = [self.ai_history[0]]
+            error_msg = str(e)
+            if "not found" in error_msg.lower():
+                return f"❌ Модель '{self.model}' не установлена\n📥 Выполните: ollama pull {self.model}"
+            return f"🌐 Ошибка AI: {error_msg}"
+    
+    def clear(self): 
+        self.ai_history = [self.ai_history[0]]
 
 # === ПОТОКИ ===
 class AIWorker(QThread):
@@ -721,7 +846,7 @@ class ScriptWorker(QThread):
             time.sleep(1.2)
         self.finished.emit(self.name)
 
-# === ИНТЕРФЕЙС (ПОЛНОСТЬЮ ПЕРЕРАБОТАН) ===
+# === ИНТЕРФЕЙС ===
 
 class Sidebar(QFrame):
     nav_changed = pyqtSignal(str)
@@ -737,7 +862,6 @@ class Sidebar(QFrame):
             }}
         """)
         
-        # Основной layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 32, 12, 32)
         layout.setSpacing(16)
@@ -760,7 +884,6 @@ class Sidebar(QFrame):
         
         layout.addSpacing(8)
         
-        # Разделитель
         sep = QFrame()
         sep.setFixedHeight(1)
         sep.setStyleSheet(f"background: {Theme.BORDER};")
@@ -768,7 +891,6 @@ class Sidebar(QFrame):
         
         layout.addSpacing(8)
         
-        # Навигационные кнопки
         self.nav_btns = {}
         nav_items = [
             ("chat", "💬", "Чат с ИИ"),
@@ -811,7 +933,6 @@ class Sidebar(QFrame):
         self.nav_btns["chat"].setChecked(True)
         layout.addStretch()
         
-        # Индикатор AI
         self.status_dot = QLabel("●")
         self.status_dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_dot.setStyleSheet(f"color: {Theme.SUCCESS}; font-size: 14px;")
@@ -833,7 +954,6 @@ class ChatPanel(QFrame):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         
-        # Заголовок чата
         header = QFrame()
         header.setFixedHeight(56)
         header.setStyleSheet(f"background: {Theme.BG_DEEP}; border-bottom: 1.5px solid {Theme.BORDER};")
@@ -863,7 +983,6 @@ class ChatPanel(QFrame):
         header_lay.addWidget(clear_btn)
         layout.addWidget(header)
         
-        # Область чата
         self.chat = QTextEdit()
         self.chat.setReadOnly(True)
         self.chat.setObjectName("chatArea")
@@ -896,16 +1015,11 @@ class ChatPanel(QFrame):
         """)
         layout.addWidget(self.chat, 1)
         
-        # Волна загрузки
         self.status_wave = StatusWave()
         layout.addWidget(self.status_wave)
         
-        # Панель ввода
         input_frame = QFrame()
-        input_frame.setStyleSheet(f"""
-            background: {Theme.BG_DEEP};
-            border-top: 1.5px solid {Theme.BORDER};
-        """)
+        input_frame.setStyleSheet(f"background: {Theme.BG_DEEP}; border-top: 1.5px solid {Theme.BORDER};")
         input_lay = QHBoxLayout(input_frame)
         input_lay.setContentsMargins(24, 16, 24, 16)
         input_lay.setSpacing(12)
@@ -950,7 +1064,6 @@ class ProcessPanel(QFrame):
         layout.setContentsMargins(40, 40, 40, 40)
         layout.setSpacing(24)
         
-        # Заголовок
         header = QHBoxLayout()
         title = QLabel("📋 Управление процессами")
         title.setFont(QFont("Segoe UI", 28, QFont.Weight.Bold))
@@ -962,12 +1075,10 @@ class ProcessPanel(QFrame):
         header.addWidget(refresh_btn)
         layout.addLayout(header)
         
-        # Подсказка
         hint = QLabel("Здесь показаны запущенные приложения. Нажмите ✕ чтобы закрыть.")
         hint.setStyleSheet(f"color: {Theme.TEXT_SECONDARY}; font-size: 14px;")
         layout.addWidget(hint)
         
-        # Скролл с процессами
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setStyleSheet(f"""
@@ -991,7 +1102,6 @@ class ProcessPanel(QFrame):
         self.process_layout.addStretch()
         layout.addWidget(self.scroll, 1)
         
-        # Поле для быстрого закрытия
         quick_frame = QFrame()
         quick_frame.setStyleSheet(f"background: {Theme.BG_DEEP}; border-radius: 16px; padding: 20px;")
         quick_lay = QHBoxLayout(quick_frame)
@@ -1021,8 +1131,6 @@ class ProcessPanel(QFrame):
         layout.addWidget(quick_frame)
     
     def update_processes(self):
-        """Обновляет список процессов"""
-        # Очистка
         while self.process_layout.count() > 1:
             item = self.process_layout.takeAt(0)
             if item.widget():
@@ -1242,7 +1350,7 @@ class SettingsPanel(QFrame):
         layout.addStretch()
         
     def update_ui(self, ai_ok: bool, voice_ok: bool, steam_path: Optional[str]):
-        self.labels["ai"].setText(f"{'✅' if ai_ok else '❌'} Ollama: {self.cfg['ai']['model']} (3.5B)")
+        self.labels["ai"].setText(f"{'✅' if ai_ok else '❌'} Ollama: {self.cfg['ai']['model']} (Qwen 3)")
         self.labels["ai"].setStyleSheet(f"color: {'#10b981' if ai_ok else '#ef4444'}; font-size: 15px; background: transparent;")
         self.labels["voice"].setText(f"{'✅' if voice_ok else '❌'} Микрофон {'готов' if voice_ok else 'не найден'}")
         self.labels["voice"].setStyleSheet(f"color: {'#10b981' if voice_ok else '#ef4444'}; font-size: 15px; background: transparent;")
@@ -1279,6 +1387,12 @@ class AboutPanel(QFrame):
         version.setStyleSheet(f"color: {Theme.ACCENT_LIGHT}; background: transparent;")
         version.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_lay.addWidget(version)
+
+        model_info = QLabel("🧠 Модель: Qwen 3 (latest)")
+        model_info.setFont(QFont("Segoe UI", 12, QFont.Weight.Medium))
+        model_info.setStyleSheet(f"color: {Theme.SUCCESS}; background: transparent;")
+        model_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card_lay.addWidget(model_info)
 
         desc = QLabel("Локальный ИИ-ассистент на базе Qwen 3\nГолос, текст, сценарии, поиск и управление ПК")
         desc.setFont(QFont("Segoe UI", 14))
@@ -1327,6 +1441,7 @@ class MIRAWindow(QMainWindow):
         
         self.voice_signal.connect(self._on_voice)
         self.active_threads = []
+        self._drag_pos = None  # Для перетаскивания окна
         
         self._setup_ui()
         self._apply_global_style()
@@ -1345,13 +1460,16 @@ class MIRAWindow(QMainWindow):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
         
-        # Заголовок окна
+        # === ЗАГОЛОВОК ОКНА (РАБОЧИЕ КНОПКИ + ПЕРЕТАСКИВАНИЕ) ===
         self.title_bar = QFrame()
         self.title_bar.setFixedHeight(40)
-        self.title_bar.setStyleSheet(f"""
-            background: {Theme.BG_DEEP};
-            border-bottom: 1.5px solid {Theme.BORDER};
-        """)
+        self.title_bar.setStyleSheet(f"background: {Theme.BG_DEEP}; border-bottom: 1.5px solid {Theme.BORDER};")
+        
+        # Добавляем поддержку перетаскивания
+        self.title_bar.mousePressEvent = self._title_bar_mouse_press
+        self.title_bar.mouseMoveEvent = self._title_bar_mouse_move
+        self.title_bar.mouseDoubleClickEvent = self._title_bar_double_click
+        
         title_layout = QHBoxLayout(self.title_bar)
         title_layout.setContentsMargins(20, 0, 8, 0)
         
@@ -1361,27 +1479,72 @@ class MIRAWindow(QMainWindow):
         title_layout.addWidget(self.title_label)
         title_layout.addStretch()
         
-        for text, func in [("─", self.showMinimized), ("□", self._toggle_maximize), ("✕", self.close)]:
-            btn = QPushButton(text)
-            btn.setFixedSize(40, 32)
-            btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: transparent;
-                    color: {Theme.TEXT_MUTED};
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 18px;
-                }}
-                QPushButton:hover {{
-                    background: rgba(255, 255, 255, 0.06);
-                    color: {Theme.TEXT_PRIMARY};
-                }}
-            """)
-            btn.clicked.connect(func)
-            title_layout.addWidget(btn)
+        # Кнопка "Свернуть" (─)
+        self.minimize_btn = QPushButton("─")
+        self.minimize_btn.setFixedSize(40, 32)
+        self.minimize_btn.setToolTip("Свернуть")
+        self.minimize_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: transparent;
+                color: {Theme.TEXT_MUTED};
+                border: none;
+                border-radius: 8px;
+                font-size: 18px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background: rgba(255, 255, 255, 0.08);
+                color: {Theme.TEXT_PRIMARY};
+            }}
+        """)
+        self.minimize_btn.clicked.connect(self.showMinimized)
+        title_layout.addWidget(self.minimize_btn)
+        
+        # Кнопка "Развернуть/Восстановить" (□/❐)
+        self.maximize_btn = QPushButton("□")
+        self.maximize_btn.setFixedSize(40, 32)
+        self.maximize_btn.setToolTip("Развернуть")
+        self.maximize_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: transparent;
+                color: {Theme.TEXT_MUTED};
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background: rgba(255, 255, 255, 0.08);
+                color: {Theme.TEXT_PRIMARY};
+            }}
+        """)
+        self.maximize_btn.clicked.connect(self._toggle_maximize)
+        title_layout.addWidget(self.maximize_btn)
+        
+        # Кнопка "Закрыть" (✕)
+        self.close_btn = QPushButton("✕")
+        self.close_btn.setFixedSize(40, 32)
+        self.close_btn.setToolTip("Закрыть")
+        self.close_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: transparent;
+                color: {Theme.TEXT_MUTED};
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background: rgba(239, 68, 68, 0.2);
+                color: #ef4444;
+            }}
+        """)
+        self.close_btn.clicked.connect(self.close)
+        title_layout.addWidget(self.close_btn)
+        
         root_layout.addWidget(self.title_bar)
         
-        # Основной контент
+        # === ОСТАЛЬНОЙ КОНТЕНТ ===
         content_widget = QWidget()
         content_layout = QHBoxLayout(content_widget)
         content_layout.setContentsMargins(0, 0, 0, 0)
@@ -1394,7 +1557,6 @@ class MIRAWindow(QMainWindow):
         self.stacked = QStackedWidget()
         self.stacked.setStyleSheet(f"background: {Theme.BG_MAIN};")
         
-        # Страницы
         self.chat_panel = ChatPanel()
         self.chat_panel.send_btn.clicked.connect(self._process)
         self.chat_panel.input.returnPressed.connect(self._process)
@@ -1422,6 +1584,21 @@ class MIRAWindow(QMainWindow):
         
         content_layout.addWidget(self.stacked, 1)
         root_layout.addWidget(content_widget, 1)
+
+    # Методы для перетаскивания окна
+    def _title_bar_mouse_press(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_pos = event.globalPosition().toPoint()
+
+    def _title_bar_mouse_move(self, event):
+        if self._drag_pos is not None and event.buttons() == Qt.MouseButton.LeftButton:
+            delta = event.globalPosition().toPoint() - self._drag_pos
+            self.move(self.pos() + delta)
+            self._drag_pos = event.globalPosition().toPoint()
+
+    def _title_bar_double_click(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._toggle_maximize()
 
     def _apply_global_style(self):
         self.setStyleSheet(f"""
@@ -1497,8 +1674,14 @@ class MIRAWindow(QMainWindow):
         sys.exit(0)
 
     def _toggle_maximize(self):
-        if self.isMaximized(): self.showNormal()
-        else: self.showMaximized()
+        if self.isMaximized():
+            self.showNormal()
+            self.maximize_btn.setText("□")
+            self.maximize_btn.setToolTip("Развернуть")
+        else:
+            self.showMaximized()
+            self.maximize_btn.setText("❐")
+            self.maximize_btn.setToolTip("Восстановить")
 
     def _switch_page(self, page: str):
         pages = {
@@ -1513,17 +1696,25 @@ class MIRAWindow(QMainWindow):
         self.stacked.setCurrentWidget(widget)
         self.title_label.setText(f"✦ MIRA — {title}")
         
-        # Обновляем процессы при переключении
         if page == "processes":
             self.process_panel.update_processes()
 
     def _boot(self):
-        self._add_bubble("ai", f"✨ Привет! Я МИРА на базе Qwen 3 (3.5B). Я могу:\n"
-                               f"• Отвечать на вопросы и помогать с задачами\n"
+        if self.ai.ai_available:
+            ai_status = f"✅ Qwen 3 подключён ({self.ai.model})"
+        else:
+            ai_status = "❌ Qwen 3 не подключён"
+        
+        self._add_bubble("ai", f"✨ Привет! Я МИРА.\n"
+                               f"{ai_status}\n\n"
+                               f"Я могу:\n"
+                               f"• Отвечать на вопросы\n"
                                f"• Запускать и закрывать приложения\n"
-                               f"• Выполнять сценарии и искать в интернете\n"
-                               f"• Работать с голосовыми командами\n\n"
-                               f"Попробуй: «закрой блокнот» или «как дела?»")
+                               f"• Выполнять сценарии\n"
+                               f"• Искать в интернете\n"
+                               f"• Работать с голосом\n\n"
+                               f"Попробуй: «открой блокнот» или «закрой хром»")
+        
         self.settings_panel.update_ui(
             self.ai.ai_available,
             self.voice.mic is not None,
@@ -1531,7 +1722,7 @@ class MIRAWindow(QMainWindow):
         )
         if self.ai.ai_available:
             self.sidebar.status_dot.setStyleSheet(f"color: {Theme.SUCCESS}; font-size: 14px;")
-            self.sidebar.status_dot.setToolTip("Qwen 3 онлайн")
+            self.sidebar.status_dot.setToolTip(f"Qwen 3 онлайн ({self.ai.model})")
         else:
             self.sidebar.status_dot.setStyleSheet(f"color: {Theme.ERROR}; font-size: 14px;")
             self.sidebar.status_dot.setToolTip("AI оффлайн")
@@ -1547,12 +1738,8 @@ class MIRAWindow(QMainWindow):
         worker.start()
 
     def _resolve_command(self, text: str) -> Tuple[Optional[str], bool, Optional[str]]:
-        """
-        Возвращает (команда, is_search, is_close)
-        """
         clean = text.lower().strip(".,!?;:- \"'")
         
-        # Проверяем команду закрытия
         close_patterns = [
             r'закрой\s+(.+)', r'выключи\s+(.+)', r'останови\s+(.+)',
             r'заверши\s+(.+)', r'убей\s+(.+)', r'close\s+(.+)'
@@ -1563,7 +1750,6 @@ class MIRAWindow(QMainWindow):
                 app_name = match.group(1).strip()
                 return f"CLOSE:{app_name}", False, True
         
-        # Проверяем поиск
         search_patterns = [
             r'найди в интернете\s+(.+)', r'погугли\s+(.+)', r'яндекси\s+(.+)',
             r'поиск в (яндекс|google|гугл)\s+(.+)'
@@ -1577,7 +1763,6 @@ class MIRAWindow(QMainWindow):
                 elif "duck" in clean: engine = "duckduckgo"
                 return f"SEARCH:{query}", True, False
         
-        # Проверяем запуск приложений
         cmd = clean
         for verb in ["открой", "запусти", "включи", "покажи", "открыть", "запустить", "включить"]:
             if cmd.startswith(verb):
@@ -1591,7 +1776,6 @@ class MIRAWindow(QMainWindow):
             if alias in cmd or cmd in alias:
                 return exe, False, False
         
-        # Проверяем на вопросы
         question_words = ["привет", "здравствуй", "как дела", "что ты умеешь", "кто ты",
                          "помоги", "спасибо", "пока", "до свидания", "расскажи", "объясни",
                          "почему", "как", "что", "где", "когда", "зачем"]
@@ -1641,26 +1825,22 @@ class MIRAWindow(QMainWindow):
         try:
             clean = text.lower().strip(".,!?;:- \"'")
             
-            # Создание сценария
             if re.match(r'создай\s+сценарий\s*[:\-]?\s*(.+)', clean):
                 name = re.match(r'создай\s+сценарий\s*[:\-]?\s*(.+)', clean).group(1).strip("\"' ")
                 QTimer.singleShot(10, lambda: self._create_script_dialog(name))
                 return
             
-            # Запуск сценария
             if re.match(r'запусти\s+сценарий\s*[:\-]?\s*(.+)', clean):
                 nm = re.match(r'запусти\s+сценарий\s*[:\-]?\s*(.+)', clean).group(1).strip("\"' ")
                 QTimer.singleShot(10, lambda: self._run_script(nm))
                 return
             
-            # Системные команды
             for cmd in self.cfg.get("commands", []):
                 trig = cmd.get("trigger", "")
                 if trig and trig in clean:
                     self._execute_cmd(cmd["action"], cmd.get("type", "app"))
                     return
             
-            # Резолвим команду
             resolved, is_search, is_close = self._resolve_command(clean)
             
             if resolved:
@@ -1676,7 +1856,6 @@ class MIRAWindow(QMainWindow):
                 worker.result.connect(self._on_cmd_result)
                 self._start_worker(worker)
             else:
-                # Отправляем в AI
                 self.chat_panel.status_wave.set_active(True)
                 self._add_bubble("ai", "🤔 Думаю...")
                 worker = AIWorker(self.ai, text)
@@ -1691,7 +1870,6 @@ class MIRAWindow(QMainWindow):
         role = "success" if "✅" in result else "error"
         self._add_bubble(role, result)
         
-        # Обновляем процессы если было закрытие
         if "закрыт" in result.lower() or "закрыто" in result.lower():
             if hasattr(self, 'process_panel'):
                 self.process_panel.update_processes()
@@ -1707,7 +1885,6 @@ class MIRAWindow(QMainWindow):
         self._start_worker(worker)
 
     def _close_process(self, app_name: str):
-        """Закрывает процесс из панели процессов"""
         if not app_name.strip():
             return
         self._add_bubble("sys", f"🔒 Закрываю: {app_name}")
@@ -1715,7 +1892,6 @@ class MIRAWindow(QMainWindow):
         worker = CmdWorker(self.executor, f"CLOSE:{app_name}", "auto")
         worker.result.connect(self._on_cmd_result)
         self._start_worker(worker)
-        # Очищаем поле ввода
         self.process_panel.quick_input.clear()
 
     def _run_script(self, name: str):
@@ -1836,7 +2012,6 @@ if __name__ == "__main__":
     app.setQuitOnLastWindowClosed(False)
     app.setStyle("Fusion")
     
-    # Глобальная палитра
     palette = QPalette()
     palette.setColor(QPalette.ColorRole.Window, QColor(12, 12, 29))
     palette.setColor(QPalette.ColorRole.WindowText, QColor(241, 245, 249))
