@@ -43,7 +43,6 @@ def handle_exception(etype, value, tb):
     logger.error("".join(traceback.format_exception(etype, value, tb)))
 sys.excepthook = handle_exception
 
-# === КОНФИГУРАЦИЯ ===
 CONFIG_PATH = Path("mira_config.json")
 
 DEFAULT_CONFIG = {
@@ -106,7 +105,7 @@ def load_config() -> Dict:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             cfg = json.load(f)
         
-        # Автоисправление: заменяем старые названия моделей на qwen3
+        
         old_models = ["qwen3:3.5b", "qwen2.5:1.5b", "qwen2.5:3.5b"]
         if cfg.get("ai", {}).get("model") in old_models:
             cfg["ai"]["model"] = "qwen3"
@@ -340,7 +339,7 @@ class StatusWave(QFrame):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawRoundedRect(0, 0, w, 3, 1.5, 1.5)
 
-# === БЭКЕНД ===
+
 
 class ProcessManager:
     """Управление процессами Windows (закрытие приложений)"""
@@ -810,7 +809,7 @@ class AIManager:
     def clear(self): 
         self.ai_history = [self.ai_history[0]]
 
-# === ПОТОКИ ===
+
 class AIWorker(QThread):
     result = pyqtSignal(str)
     def __init__(self, ai: AIManager, prompt: str):
@@ -1426,7 +1425,7 @@ class AboutPanel(QFrame):
 
         layout.addWidget(card, 0, Qt.AlignmentFlag.AlignCenter)
 
-# === ГЛАВНОЕ ОКНО ===
+
 
 class MIRAWindow(QMainWindow):
     voice_signal = pyqtSignal(str)
@@ -1440,7 +1439,7 @@ class MIRAWindow(QMainWindow):
         
         self.voice_signal.connect(self._on_voice)
         self.active_threads = []
-        self._drag_pos = None  # Для перетаскивания окна
+        self._drag_pos = None  
         
         self._setup_ui()
         self._apply_global_style()
@@ -1459,12 +1458,12 @@ class MIRAWindow(QMainWindow):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
         
-        # === ЗАГОЛОВОК ОКНА (РАБОЧИЕ КНОПКИ + ПЕРЕТАСКИВАНИЕ) ===
+        
         self.title_bar = QFrame()
         self.title_bar.setFixedHeight(40)
         self.title_bar.setStyleSheet(f"background: {Theme.BG_DEEP}; border-bottom: 1.5px solid {Theme.BORDER};")
         
-        # Добавляем поддержку перетаскивания
+        
         self.title_bar.mousePressEvent = self._title_bar_mouse_press
         self.title_bar.mouseMoveEvent = self._title_bar_mouse_move
         self.title_bar.mouseDoubleClickEvent = self._title_bar_double_click
@@ -1499,7 +1498,7 @@ class MIRAWindow(QMainWindow):
         self.minimize_btn.clicked.connect(self.showMinimized)
         title_layout.addWidget(self.minimize_btn)
         
-        # Кнопка "Развернуть/Восстановить" (□/❐)
+       
         self.maximize_btn = QPushButton("□")
         self.maximize_btn.setFixedSize(40, 32)
         self.maximize_btn.setToolTip("Развернуть")
@@ -1584,7 +1583,7 @@ class MIRAWindow(QMainWindow):
         content_layout.addWidget(self.stacked, 1)
         root_layout.addWidget(content_widget, 1)
 
-    # Методы для перетаскивания окна
+    
     def _title_bar_mouse_press(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_pos = event.globalPosition().toPoint()
