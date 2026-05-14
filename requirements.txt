@@ -1,7 +1,9 @@
-speech_recognition
+SpeechRecognition
+PyQt6
+pyttsx3
+psutil
 pyaudio
 requests
 pycaw
 comtypes
-psutil
-pyttsx3
+
