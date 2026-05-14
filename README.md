@@ -1,5 +1,3 @@
-Вот единый, полный и актуальный `README.md` для MIRA v13.0 "NEBULA":
-
 ```markdown
 # 🌟 MIRA — Виртуальный ИИ-Ассистент v13.0 "NEBULA"
 
@@ -53,6 +51,7 @@
 ```bash
 git clone https://github.com/CayPlay78/mira-ai-assistant.git
 cd mira-ai-assistant
+
 ```
 
 ### Шаг 2: Установка зависимостей
