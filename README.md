@@ -42,5 +42,3 @@
 ```bash
 git clone https://github.com/CayPlayProjects/Mira-assistant
 cd mira-ai-assistant
-### Шаг 2: Установка зависимостей
-pip install -r requirements.txt
