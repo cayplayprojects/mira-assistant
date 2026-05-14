@@ -5,7 +5,6 @@
 🧠 AI: Qwen 3 (latest) на Ollama
 🔄 Управление процессами (закрытие приложений)
 🔧 Интеллектуальная обработка ошибок (приложения не найдены)
-🪟 Рабочие кнопки управления окном + перетаскивание
 📋 Установка Qwen 3: ollama pull qwen3
 © CayPlay 2026. Все права защищены.
 """
@@ -1417,7 +1416,7 @@ class AboutPanel(QFrame):
         btns_lay.setSpacing(16)
         btns_lay.addStretch()
         gh_btn = StyledButton("GitHub", icon_text="🐙")
-        gh_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com")))
+        gh_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/CayPlayProjects")))
         tg_btn = StyledButton("Telegram", accent=True, icon_text="✈️")
         tg_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://t.me/CayPlay78")))
         btns_lay.addWidget(gh_btn)
