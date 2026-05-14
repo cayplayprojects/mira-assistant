@@ -3,3 +3,4 @@ pyaudio
 requests
 pycaw
 comtypes
+psutil
