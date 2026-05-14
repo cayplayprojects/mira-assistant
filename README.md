@@ -1,11 +1,10 @@
-```markdown
 # 🌟 MIRA — Виртуальный ИИ-Ассистент v13.0 "NEBULA"
 
 **MIRA** — это современный, полноэкранный виртуальный ассистент с искусственным интеллектом, работающий локально на вашем компьютере. Создан для полного контроля над системой, автоматизации рутинных задач и быстрого поиска информации.
 
 > 🛡️ **Безопасность и Приватность:** Вся обработка нейросетью происходит **локально** на вашем железе (через Ollama). Никаких ключей API, никакой передачи данных в облако.
 
-![MIRA Banner](https://img.shields.io/badge/MIRA-v13.0_NEBULA-8b5cf6?style=for-the-badge&logo=starship&logoColor=white)
+![MIRA v13.0 NEBULA](https://img.shields.io/badge/MIRA-v13.0_NEBULA-8b5cf6?style=for-the-badge&logo=starship&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)
 ![Ollama](https://img.shields.io/badge/Ollama-Qwen_3-000000?style=flat-square&logo=ollama)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
@@ -71,12 +70,13 @@ pip install -r requirements.txt
 MIRA использует **Ollama** для запуска нейросети.
 
 1.  Скачайте и установите Ollama: [https://ollama.com/download](https://ollama.com/download)
-2.  Запустите терминал (Win+R → `cmd`) и скачайте модель Qwen 3:
+    *   *Windows:* `irm https://ollama.com/install.ps1 | iex` (PowerShell)
+    *   *macOS/Linux:* `curl -fsSL https://ollama.com/install.sh | sh`
+2.  Запустите терминал и скачайте модель Qwen 3:
     ```bash
     ollama pull qwen3
     ```
     *(Размер ~4-8 ГБ, отличное понимание русского языка)*
-
 3.  Проверьте установку:
     ```bash
     ollama list
@@ -234,13 +234,15 @@ MIRA v13.0 имеет полностью переработанный интер
 
 | Библиотека | Назначение | Ссылка |
 | :--- | :--- | :--- |
-| **PyQt6** | Графический интерфейс | [Riverbank](https://www.riverbankcomputing.com/software/pyqt/) |
+| **PyQt6** | Графический интерфейс (Qt6, Windows/macOS/Linux) | [Riverbank](https://www.riverbankcomputing.com/software/pyqt/) |
 | **Ollama** | Локальный запуск нейросетей | [ollama.com](https://ollama.com/) |
-| **SpeechRecognition** | Распознавание речи | [PyPI](https://pypi.org/project/SpeechRecognition/) |
+| **SpeechRecognition** | Распознавание речи (поддержка офлайн/онлайн движков) | [PyPI](https://pypi.org/project/SpeechRecognition/) |
 | **pyttsx3** | Синтез речи (TTS) | [PyPI](https://pypi.org/project/pyttsx3/) |
-| **psutil** | Системная информация | [GitHub](https://github.com/giampaolo/psutil) |
-| **pywin32** | Windows API | [GitHub](https://github.com/mhammond/pywin32) |
-| **PyAudio** | Запись с микрофона | [PyPI](https://pypi.org/project/PyAudio/) |
+| **psutil** | Системная информация и управление процессами | [GitHub](https://github.com/giampaolo/psutil) |
+| **pywin32** | Windows API интеграция | [GitHub](https://github.com/mhammond/pywin32) |
+| **PyAudio** | Запись с микрофона (требует PortAudio) | [PyPI](https://pypi.org/project/PyAudio/) |
+
+> 💡 **Примечание по лицензиям:** PyQt6 распространяется под двойной лицензией (GPLv3 / Коммерческая). Для личного/некоммерческого использования GPLv3 подходит идеально.
 
 ---
 
@@ -263,6 +265,7 @@ ollama list
    pip install pipwin
    pipwin install pyaudio
    ```
+4. Если recognizer не ловит голос, попробуйте вызвать `recognizer.adjust_for_ambient_noise(source)` перед записью или уменьшите `energy_threshold`.
 
 **Q: Программа не находит приложение.**
 **A:** МИРА теперь показывает подробные сообщения:
@@ -294,6 +297,7 @@ ollama pull qwen3
 - **PyAudio** может не устанавливаться на некоторых системах — используйте `pipwin`
 - **Steam** должен быть установлен для авто-поиска игр
 - Для полного функционала требуются права администратора (закрытие некоторых процессов)
+- На Raspberry Pi может потребоваться USB-микрофон и явная указка `device_index` для PyAudio
 
 ---
 
@@ -321,5 +325,3 @@ MIT License © CayPlay 2026. Все права защищены.
 
 Разработано с ❤️ для удобного управления компьютером.
 ```
-
-Этот README теперь полностью актуален, содержит все новые функции v13.0 "Nebula", правильные ссылки, контакты и подробные инструкции по установке Qwen 3.
