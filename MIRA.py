@@ -1381,7 +1381,7 @@ class AboutPanel(QFrame):
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_lay.addWidget(title)
 
-        version = QLabel("v13.0 \"Nebula\"")
+        version = QLabel("v13.3 \"Nebula\"")
         version.setFont(QFont("Consolas", 14))
         version.setStyleSheet(f"color: {Theme.ACCENT_LIGHT}; background: transparent;")
         version.setAlignment(Qt.AlignmentFlag.AlignCenter)
