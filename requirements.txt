@@ -4,3 +4,4 @@ requests
 pycaw
 comtypes
 psutil
+pyttsx3
